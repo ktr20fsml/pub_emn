@@ -1,0 +1,5 @@
+
+api/tmp
+api/domain/model
+api/infrastructure/dto
+api/infrastructure/database

@@ -1,0 +1,53 @@
+package injector
+
+import (
+	domainRepo "api/domain/repository"
+	databaseRepo "api/infrastructure/repository"
+	"api/interface/adapter/gateway"
+	"api/interface/adapter/handler"
+	"api/usecase"
+
+	"github.com/jmoiron/sqlx"
+)
+
+type ItemInteractor struct {
+	DB *sqlx.DB
+}
+
+type ItemInjector interface {
+	NewItemHandler() handler.ItemHandler
+}
+
+func (i *ItemInteractor) NewItemHandler() handler.ItemHandler {
+	return handler.NewItemHandler(i.NewItemService())
+}
+
+func (i *ItemInteractor) NewItemService() usecase.ItemUsecase {
+	return usecase.NewItemUsecase(
+		i.NewTransactionRepository(),
+		i.NewItemRepository(),
+		i.NewMachineRepository(),
+		i.NewLocationRepository(),
+		i.NewGeneralRepository(),
+	)
+}
+
+func (i *ItemInteractor) NewTransactionRepository() domainRepo.TransactionRepository {
+	return gateway.NewTransactionRepository(i.DB)
+}
+
+func (i *ItemInteractor) NewItemRepository() domainRepo.ItemRepository {
+	return databaseRepo.NewItemRepository(i.DB)
+}
+
+func (i *ItemInteractor) NewMachineRepository() domainRepo.MachineRepository {
+	return databaseRepo.NewMachineRepository(i.DB)
+}
+
+func (i *ItemInteractor) NewLocationRepository() domainRepo.LocationRepository {
+	return databaseRepo.NewLocationRepository(i.DB)
+}
+
+func (i *ItemInteractor) NewGeneralRepository() domainRepo.GeneralRepository {
+	return databaseRepo.NewGeneralRepository(i.DB)
+}
