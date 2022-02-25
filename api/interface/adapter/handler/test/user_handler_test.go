@@ -25,9 +25,6 @@ func Test_NewUserHandler(t *testing.T) {
 }
 
 func Test_FindAllUsers(t *testing.T) {
-	type TestUserUsecase struct {
-		TestFindAllUsers func() ([]*domainUser.User, error)
-	}
 	type arguments struct{}
 	type mock struct {
 		ctx context.Context
@@ -43,15 +40,15 @@ func Test_FindAllUsers(t *testing.T) {
 	}
 	tests := []struct {
 		name            string
-		testUserUsecase TestUserUsecase
+		testUserUsecase *mock_usecase.MockUserUsecase
 		arguments       arguments
 		mock            mock
 		want            want
 	}{
 		{
 			name: "Successfully",
-			testUserUsecase: TestUserUsecase{
-				TestFindAllUsers: func() ([]*domainUser.User, error) {
+			testUserUsecase: &mock_usecase.MockUserUsecase{
+				MockFindAllUsers: func() ([]*domainUser.User, error) {
 					users := make([]*domainUser.User, 3)
 					for i := range users {
 						users[i] = &domainUser.User{
@@ -84,25 +81,26 @@ func Test_FindAllUsers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userUsecase := &mock_usecase.MockUserUsecase{}
-			userUsecase.MockFindAllUsers = tt.testUserUsecase.TestFindAllUsers
+			userUsecase.MockFindAllUsers = tt.testUserUsecase.MockFindAllUsers
 			userHandler := handler.NewUserHandler(userUsecase)
 
+			gin.SetMode(gin.TestMode)
 			g := gin.New()
 			g.GET("/api/users", userHandler.GetUsers)
 
-			recorder := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 			request, err := http.NewRequest("GET", "/api/users", nil)
 			if err != nil {
 				t.Fatalf("FAILED TO GENERATE HTTP REQUEST: %s", err)
 			}
-			g.ServeHTTP(recorder, request)
+			g.ServeHTTP(w, request)
 
 			if tt.want.statusCode == http.StatusOK {
-				got, err := tt.testUserUsecase.TestFindAllUsers()
+				got, err := tt.testUserUsecase.FindAllUsers()
 				if err != nil {
 					t.Fatalf("FAILED TO CALL TestUserUsecase.TestFindAllUsers METHOD: %s", err.Error())
 				}
-				err = json.Unmarshal(recorder.Body.Bytes(), &got)
+				err = json.Unmarshal(w.Body.Bytes(), &got)
 				if err != nil {
 					t.Fatalf("FAILED TO UNMARSHAL JSON: %s", err.Error())
 				}
@@ -110,8 +108,8 @@ func Test_FindAllUsers(t *testing.T) {
 					t.Errorf("GET \"api/users\" RESPONSE %v, but want = %v", got, tt.want.result)
 				}
 			}
-			if !reflect.DeepEqual(recorder.Code, tt.want.statusCode) {
-				t.Errorf("STATUS CODE = %v, want = %v", recorder.Code, tt.want.statusCode)
+			if !reflect.DeepEqual(w.Code, tt.want.statusCode) {
+				t.Errorf("STATUS CODE = %v, want = %v", w.Code, tt.want.statusCode)
 			}
 		})
 	}
