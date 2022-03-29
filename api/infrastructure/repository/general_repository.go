@@ -60,8 +60,18 @@ func (gr *generalRepository) CreateTableInformations(ctx context.Context, tableI
 	return nil
 }
 
-func (gr *generalRepository) UpdateTableInformation(tableInfo *domainGeneral.TableInformation) error {
-	_, err := gr.db.NamedExec(sql.UpdateTableInformation, dtoGeneral.ConvertToTableInformationData(tableInfo))
+func (gr *generalRepository) UpdateTableInformation(ctx context.Context, tableInfo *domainGeneral.TableInformation) error {
+	dao, ok := gateway.GetTx(ctx)
+	if !ok {
+		_, err := gr.db.NamedExec(sql.UpdateTableInformation, dtoGeneral.ConvertToTableInformationData(tableInfo))
+		if err != nil {
+			return fmt.Errorf("FAILED TO UPDATE TABLE INFORMATION: %s", err.Error())
+		}
+
+		return nil
+	}
+
+	_, err := dao.NamedExec(sql.UpdateTableInformation, dtoGeneral.ConvertToTableInformationData(tableInfo))
 	if err != nil {
 		return fmt.Errorf("FAILED TO UPDATE TABLE INFORMATION: %s", err.Error())
 	}
@@ -69,10 +79,20 @@ func (gr *generalRepository) UpdateTableInformation(tableInfo *domainGeneral.Tab
 	return nil
 }
 
-func (gr *generalRepository) UpdateTableInformations(tableInfos []*domainGeneral.TableInformation) error {
-	_, err := gr.db.NamedExec(sql.UpdateTableInformation, dtoGeneral.ConvertToTableInformationsDatas(tableInfos))
+func (gr *generalRepository) UpdateTableInformations(ctx context.Context, tableInfos []*domainGeneral.TableInformation) error {
+	dao, ok := gateway.GetTx(ctx)
+	if !ok {
+		_, err := gr.db.NamedExec(sql.UpdateTableInformation, dtoGeneral.ConvertToTableInformationsDatas(tableInfos))
+		if err != nil {
+			return fmt.Errorf("FAILED TO UPDATE TABLE INFORMATIONS: %s", err.Error())
+		}
+
+		return nil
+	}
+
+	_, err := dao.NamedExec(sql.UpdateTableInformation, dtoGeneral.ConvertToTableInformationsDatas(tableInfos))
 	if err != nil {
-		return fmt.Errorf("FAILED TO UPDATE TABLE INFORMATION: %s", err.Error())
+		return fmt.Errorf("FAILED TO UPDATE TABLE INFORMATIONS: %s", err.Error())
 	}
 
 	return nil

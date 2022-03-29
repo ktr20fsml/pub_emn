@@ -8,6 +8,6 @@ import (
 type GeneralRepository interface {
 	CreateTableInformation(context.Context, *domainGeneral.TableInformation) error
 	CreateTableInformations(context.Context, []*domainGeneral.TableInformation) error
-	UpdateTableInformation(*domainGeneral.TableInformation) error
-	UpdateTableInformations([]*domainGeneral.TableInformation) error
+	UpdateTableInformation(context.Context, *domainGeneral.TableInformation) error
+	UpdateTableInformations(context.Context, []*domainGeneral.TableInformation) error
 }
