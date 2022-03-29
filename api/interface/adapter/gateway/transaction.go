@@ -24,7 +24,12 @@ func NewTransactionRepository(conn *sqlx.DB) repository.TransactionRepository {
 	}
 }
 
-func (tr *TransactionRepository) ExecWtihTx(ctx context.Context, f func(ctx context.Context) (interface{}, error)) (interface{}, error) {
+func (tr *TransactionRepository) ExecWtihTx(ctx context.Context, f func(context.Context) (interface{}, error)) (interface{}, error) {
+	if ctx == nil {
+		fmt.Println("THE CONTEXT OBJECT DOES NOT EXIST.")
+		ctx = context.Background()
+	}
+
 	conn := tr.GetDBConnection()
 	// Create the transaction object.
 	tx, err := conn.Beginx()
@@ -50,6 +55,9 @@ func (tr *TransactionRepository) ExecWtihTx(ctx context.Context, f func(ctx cont
 }
 
 func GetTx(ctx context.Context) (*sqlx.Tx, bool) {
+	if ctx == nil {
+		return nil, false
+	}
 	tx, ok := ctx.Value(&txKey).(*sqlx.Tx)
 	return tx, ok
 }

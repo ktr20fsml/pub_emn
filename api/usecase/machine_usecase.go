@@ -15,11 +15,11 @@ type machineUsecase struct {
 type MachineUsecase interface {
 	FindMachineByID(domainMachine.MachineID) (*domainMachine.Machine, error)
 	FindAllMachines() ([]*domainMachine.Machine, error)
-	CreateMachine(context.Context, *domainMachine.Machine) error
-	UpdateMachine(context.Context, *domainMachine.Machine) error
-	StopUsingMachine(context.Context, *domainMachine.Machine) error
-	CreateBssMachineListID(context.Context, domainMachine.MachineListID) error
-	CreateMachineList(context.Context, []*domainMachine.MachineList) error
+	CreateMachine(*domainMachine.Machine) error
+	UpdateMachine(*domainMachine.Machine) error
+	StopUsingMachine(*domainMachine.Machine) error
+	CreateBssMachineListID(domainMachine.MachineListID) error
+	CreateMachineList([]*domainMachine.MachineList) error
 }
 
 func NewMachineUsecase(
@@ -49,12 +49,10 @@ func (mu *machineUsecase) FindAllMachines() ([]*domainMachine.Machine, error) {
 }
 
 /*
-	Execute "createMachine" method with the database transaction.
+	Create a machine's data.
 */
-func (mu *machineUsecase) CreateMachine(ctx context.Context, machine *domainMachine.Machine) error {
-	// commit or rollback
-	// _, err := mu.transactionRepository.ExecWtihTx(ctx, mu.createMachine(machine))
-	_, err := mu.transactionRepository.ExecWtihTx(ctx, func(ctx context.Context) (interface{}, error) {
+func (mu *machineUsecase) createMachine(machine *domainMachine.Machine) func(context.Context) (interface{}, error) {
+	return func(ctx context.Context) (interface{}, error) {
 		var err error
 
 		// Insert the table information data.
@@ -64,14 +62,23 @@ func (mu *machineUsecase) CreateMachine(ctx context.Context, machine *domainMach
 		}
 
 		// Insert the machine data.
-		err = mu.machineRepository.CreateMachine(machine)
+		err = mu.machineRepository.CreateMachine(ctx, machine)
 		if err != nil {
 			return nil, err
 		}
 
 		return nil, nil
-	})
+	}
+}
 
+/*
+	Execute "createMachine" method with the database transaction.
+*/
+func (mu *machineUsecase) CreateMachine(machine *domainMachine.Machine) error {
+	var ctx context.Context
+
+	// commit or rollback
+	_, err := mu.transactionRepository.ExecWtihTx(ctx, mu.createMachine(machine))
 	if err != nil {
 		return err
 	}
@@ -87,13 +94,13 @@ func (mu *machineUsecase) updateMachine(machine *domainMachine.Machine) func(con
 		var err error
 
 		// Update the table information data.
-		err = mu.generalRepository.UpdateTableInformation(&machine.TableInformation)
+		err = mu.generalRepository.UpdateTableInformation(ctx, &machine.TableInformation)
 		if err != nil {
 			return nil, err
 		}
 
 		// Update the machine data.
-		err = mu.machineRepository.UpdateMachine(machine)
+		err = mu.machineRepository.UpdateMachine(ctx, machine)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +112,9 @@ func (mu *machineUsecase) updateMachine(machine *domainMachine.Machine) func(con
 /*
 	Execute "updateMachine" method with the database transaction.
 */
-func (mu *machineUsecase) UpdateMachine(ctx context.Context, machine *domainMachine.Machine) error {
+func (mu *machineUsecase) UpdateMachine(machine *domainMachine.Machine) error {
+	ctx := context.Background()
+
 	// commit or rollback
 	_, err := mu.transactionRepository.ExecWtihTx(ctx, mu.updateMachine(machine))
 	if err != nil {
@@ -122,12 +131,12 @@ func (mu *machineUsecase) stopUsingMachine(machine *domainMachine.Machine) func(
 	return func(ctx context.Context) (interface{}, error) {
 		var err error
 
-		err = mu.generalRepository.UpdateTableInformation(&machine.TableInformation)
+		err = mu.generalRepository.UpdateTableInformation(ctx, &machine.TableInformation)
 		if err != nil {
 			return nil, err
 		}
 
-		err = mu.machineRepository.StopUsingMachine(machine)
+		err = mu.machineRepository.StopUsingMachine(ctx, machine)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +148,9 @@ func (mu *machineUsecase) stopUsingMachine(machine *domainMachine.Machine) func(
 /*
 	Execute "stopUsingMachine" method with the database transaction.
 */
-func (mu *machineUsecase) StopUsingMachine(ctx context.Context, machine *domainMachine.Machine) error {
+func (mu *machineUsecase) StopUsingMachine(machine *domainMachine.Machine) error {
+	var ctx context.Context
+
 	// commit or rollback
 	_, err := mu.transactionRepository.ExecWtihTx(ctx, mu.stopUsingMachine(machine))
 	if err != nil {
@@ -149,11 +160,30 @@ func (mu *machineUsecase) StopUsingMachine(ctx context.Context, machine *domainM
 	return nil
 }
 
-func (mu *machineUsecase) CreateBssMachineListID(ctx context.Context, bssMachineListID domainMachine.MachineListID) error {
-	return mu.machineRepository.CreateBssMachineListID(ctx, bssMachineListID)
+func (mu *machineUsecase) createBssMachineListID(bssMachineListID domainMachine.MachineListID) func(context.Context) (interface{}, error) {
+	return func(ctx context.Context) (interface{}, error) {
+		err := mu.machineRepository.CreateBssMachineListID(ctx, bssMachineListID)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	}
 }
 
-func (mu *machineUsecase) createMachineList(ctx context.Context, machineList []*domainMachine.MachineList) func(context.Context) (interface{}, error) {
+func (mu *machineUsecase) CreateBssMachineListID(bssMachineListID domainMachine.MachineListID) error {
+	var ctx context.Context
+
+	// commit or rollback
+	_, err := mu.transactionRepository.ExecWtihTx(ctx, mu.createBssMachineListID(bssMachineListID))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (mu *machineUsecase) createMachineList(machineList []*domainMachine.MachineList) func(context.Context) (interface{}, error) {
 	return func(ctx context.Context) (interface{}, error) {
 		// err := mu.machineRepository.CreateMachineList(machineList)
 		err := mu.machineRepository.CreateMachineList(ctx, machineList)
@@ -165,20 +195,26 @@ func (mu *machineUsecase) createMachineList(ctx context.Context, machineList []*
 	}
 }
 
-func (mu *machineUsecase) CreateMachineList(ctx context.Context, machineList []*domainMachine.MachineList) error {
-	// _, err := mu.transactionRepository.ExecWtihTx(ctx, mu.createMachineList(machineList))
-	_, errTx := mu.transactionRepository.ExecWtihTx(ctx, func(ctx context.Context) (interface{}, error) {
-		err := mu.machineRepository.CreateMachineList(ctx, machineList)
-		if err != nil {
-			return nil, err
-		}
+func (mu *machineUsecase) CreateMachineList(machineList []*domainMachine.MachineList) error {
+	var ctx context.Context
 
-		return nil, nil
-	})
-
-	if errTx != nil {
-		return errTx
+	// commit or rollback
+	_, err := mu.transactionRepository.ExecWtihTx(ctx, mu.createMachineList(machineList))
+	if err != nil {
+		return err
 	}
+	// _, errTx := mu.transactionRepository.ExecWtihTx(ctx, func(ctx context.Context) (interface{}, error) {
+	// 	err := mu.machineRepository.CreateMachineList(ctx, machineList)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	return nil, nil
+	// })
+
+	// if errTx != nil {
+	// 	return errTx
+	// }
 
 	return nil
 
