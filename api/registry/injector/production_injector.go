@@ -2,8 +2,8 @@ package injector
 
 import (
 	domainRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
 	domainServ "api/domain/service"
+	databaseRepo "api/infrastructure/repository"
 	databaseServ "api/infrastructure/service"
 	"api/interface/adapter/gateway"
 	"api/interface/adapter/handler"
@@ -28,10 +28,9 @@ func (i *ProductionInteractor) NewProductionUsecase() usecase.ProductionUsecase 
 	return usecase.NewProductionUsecase(
 		i.NewTransactionRepository(),
 		i.NewProductionRepository(),
-		i.NewProductionService(),
-		i.NewItemRepository(),
-		i.NewInventoryRepository(),
 		i.NewGeneralRepository(),
+		i.NewInventoryRepository(),
+		i.NewProductionService(),
 	)
 }
 
@@ -39,12 +38,12 @@ func (i *ProductionInteractor) NewTransactionRepository() domainRepo.Transaction
 	return gateway.NewTransactionRepository(i.DB)
 }
 
-func (i *ProductionInteractor) NewProductionRepository() domainRepo.ProductionRepository {
-	return databaseRepo.NewProductionRepository(i.DB)
+func (i *ProductionInteractor) NewProductionService() domainServ.ProductionService {
+	return databaseServ.NewProductionService(i.DB, i.NewItemRepository(), i.NewInventoryRepository())
 }
 
-func (i *ProductionInteractor) NewProductionService() domainServ.ProductionService {
-	return databaseServ.NewProductionService(i.DB)
+func (i *ProductionInteractor) NewProductionRepository() domainRepo.ProductionRepository {
+	return databaseRepo.NewProductionRepository(i.DB)
 }
 
 func (i *ProductionInteractor) NewItemRepository() domainRepo.ItemRepository {

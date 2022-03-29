@@ -1,8 +1,5 @@
 
 api/tmp
-client/dist_electron
-client/node_modules
-database/pgadmin
-database/postgres/data
-json_data
-api/.vscode
+api/domain/model
+api/infrastructure/dto
+api/infrastructure/database

@@ -81,7 +81,7 @@ func (mh *machineHandler) CreateMachine(ctx *gin.Context) {
 	machine.TableInformationID, table_info.ID = tableInfoID, tableInfoID
 	machine.TableInformation = *table_info
 
-	errCreate := mh.machineUsecase.CreateMachine(machine)
+	errCreate := mh.machineUsecase.CreateMachine(ctx, machine)
 	if errCreate != nil {
 		ctx.JSON(http.StatusBadRequest, status.Status{Message: errCreate.Error()})
 		return
@@ -106,7 +106,7 @@ func (mh *machineHandler) UpdateMachine(ctx *gin.Context) {
 	machine.TableInformation.UpdatedAt = time.Now()
 	machine.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
 
-	errUpdate := mh.machineUsecase.UpdateMachine(machine)
+	errUpdate := mh.machineUsecase.UpdateMachine(ctx, machine)
 	if errUpdate != nil {
 		ctx.JSON(http.StatusBadRequest, status.Status{Message: errUpdate.Error()})
 		return
@@ -131,7 +131,7 @@ func (mh *machineHandler) StopUsingMachine(ctx *gin.Context) {
 	machine.TableInformation.UpdatedAt = time.Now()
 	machine.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
 
-	errUpdate := mh.machineUsecase.StopUsingMachine(machine)
+	errUpdate := mh.machineUsecase.StopUsingMachine(ctx, machine)
 	if errUpdate != nil {
 		ctx.JSON(http.StatusBadRequest, status.Status{Message: errUpdate.Error()})
 		return

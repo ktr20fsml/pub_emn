@@ -51,20 +51,10 @@ func (mr *machineRepository) FindAllMachines() ([]*domainMachine.Machine, error)
 /*
 	Store a machine data.
 */
-func (mr *machineRepository) CreateMachine(ctx context.Context, machine *domainMachine.Machine) error {
-	dao, ok := gateway.GetTx(ctx)
-	if !ok {
-		_, err := mr.db.NamedExec(sql.InsertMachine, dtoMachine.ConvertToMachineData(machine))
-		if err != nil {
-			return fmt.Errorf("FAILED TO INSERT MACHINE DATA: %s", err.Error())
-		}
-
-		return nil
-	}
-
-	_, err := dao.NamedExec(sql.InsertMachine, dtoMachine.ConvertToMachineData(machine))
+func (mr *machineRepository) CreateMachine(machine *domainMachine.Machine) error {
+	_, err := mr.db.NamedExec(sql.InsertMachine, dtoMachine.ConvertToMachineData(machine))
 	if err != nil {
-		return fmt.Errorf("FAILED TO INSERT MACHINE DATA WITH TRANSACTION: %s", err.Error())
+		return fmt.Errorf("FAILED TO INSERT MACHINE DATA: %s", err.Error())
 	}
 
 	return nil
@@ -73,18 +63,8 @@ func (mr *machineRepository) CreateMachine(ctx context.Context, machine *domainM
 /*
 	Update a machine data.
 */
-func (mr *machineRepository) UpdateMachine(ctx context.Context, machine *domainMachine.Machine) error {
-	dao, ok := gateway.GetTx(ctx)
-	if !ok {
-		_, err := mr.db.NamedExec(sql.UpdateMachine, dtoMachine.ConvertToMachineData(machine))
-		if err != nil {
-			return fmt.Errorf("FAILED TO UPDATE MACHINE DATA: %s", err.Error())
-		}
-
-		return nil
-	}
-
-	_, err := dao.NamedExec(sql.UpdateMachine, dtoMachine.ConvertToMachineData(machine))
+func (mr *machineRepository) UpdateMachine(machine *domainMachine.Machine) error {
+	_, err := mr.db.NamedExec(sql.UpdateMachine, dtoMachine.ConvertToMachineData(machine))
 	if err != nil {
 		return fmt.Errorf("FAILED TO UPDATE MACHINE DATA: %s", err.Error())
 	}
@@ -95,18 +75,8 @@ func (mr *machineRepository) UpdateMachine(ctx context.Context, machine *domainM
 /*
 	Update a machine's "stop using" data.
 */
-func (mr *machineRepository) StopUsingMachine(ctx context.Context, machine *domainMachine.Machine) error {
-	dao, ok := gateway.GetTx(ctx)
-	if !ok {
-		_, err := mr.db.NamedExec(sql.StopUsingMachine, dtoMachine.ConvertToMachineData(machine))
-		if err != nil {
-			return fmt.Errorf("FAILED TO UPDATE MACHINE DATA: %s", err.Error())
-		}
-
-		return nil
-	}
-
-	_, err := dao.NamedExec(sql.StopUsingMachine, dtoMachine.ConvertToMachineData(machine))
+func (mr *machineRepository) StopUsingMachine(machine *domainMachine.Machine) error {
+	_, err := mr.db.NamedExec(sql.StopUsingMachine, dtoMachine.ConvertToMachineData(machine))
 	if err != nil {
 		return fmt.Errorf("FAILED TO UPDATE MACHINE DATA: %s", err.Error())
 	}
