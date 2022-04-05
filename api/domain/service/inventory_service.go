@@ -5,5 +5,5 @@ import (
 )
 
 type InventoryService interface {
-	CheckItemExists(itemID domainItem.Item, processID domainItem.ProcessID, lot string, branch string) bool
+	CheckExists(domainItem.ItemID, domainItem.ProcessID, string, string) (bool, error)
 }

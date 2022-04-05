@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"api/infrastructure/library/session"
+	session_helper "api/interface/adapter/handler/helper"
 	"api/status"
 	"net/http"
 
@@ -23,14 +23,14 @@ var (
 
 func SessionCheck() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		sessionInfo.UserID = session.GetUserID(ctx)
+		sessionInfo.UserID = session_helper.GetUserID(ctx)
 		if sessionInfo.UserID == "" {
 			ctx.JSON(http.StatusBadRequest, status.Status{Message: errInvalidSession})
 			ctx.Abort()
 		} else {
 			ctx.Set("UserName", sessionInfo.UserName)
-			ctx.Set("UserID", session.GetUserName(ctx))
-			ctx.Set("Administrative", session.GetAdministrative(ctx))
+			ctx.Set("UserID", session_helper.GetUserName(ctx))
+			ctx.Set("Administrative", session_helper.GetAdministrative(ctx))
 			ctx.Next()
 		}
 	}
@@ -38,18 +38,19 @@ func SessionCheck() gin.HandlerFunc {
 
 func SessionAdministratorCheck() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		sessionInfo.Administrative = session.GetAdministrative(ctx)
-		if sessionInfo.Administrative == false {
+		sessionInfo.UserID = session_helper.GetUserID(ctx)
+		sessionInfo.Administrative = session_helper.GetAdministrative(ctx)
+		if sessionInfo.UserID == "" {
 			ctx.JSON(http.StatusBadRequest, status.Status{Message: errInvalidSession})
 			ctx.Abort()
 		} else {
-			if sessionInfo.Administrative == false {
+			if !sessionInfo.Administrative {
 				ctx.JSON(http.StatusBadRequest, status.Status{Message: errInvalidSessionAdministrator})
 				ctx.Abort()
 			} else {
-				ctx.Set("UserName", session.GetUserID(ctx))
-				ctx.Set("UserID", session.GetUserName(ctx))
-				ctx.Set("Administrative", session.GetAdministrative(ctx))
+				ctx.Set("UserName", session_helper.GetUserID(ctx))
+				ctx.Set("UserID", session_helper.GetUserName(ctx))
+				ctx.Set("Administrative", session_helper.GetAdministrative(ctx))
 				ctx.Next()
 			}
 		}

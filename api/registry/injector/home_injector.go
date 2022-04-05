@@ -2,7 +2,9 @@ package injector
 
 import (
 	usecaseRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
+	domainServ "api/domain/service"
+	infrastructureRepo "api/infrastructure/repository"
+	infrastructureServ "api/infrastructure/service"
 	"api/interface/adapter/handler"
 	"api/usecase"
 
@@ -18,7 +20,14 @@ type HomeInjector interface {
 }
 
 func (i *HomeInteractor) NewHomeHandler() handler.HomeHandler {
-	return handler.NewHomeHandler(i.NewHomeUsecase())
+	return handler.NewHomeHandler(
+		i.NewHomeUsecase(),
+		i.NewUtilityService(),
+	)
+}
+
+func (i *HomeInteractor) NewUtilityService() domainServ.UtilityService {
+	return infrastructureServ.NewUtilityService()
 }
 
 func (i *HomeInteractor) NewHomeUsecase() usecase.HomeUsecase {
@@ -26,5 +35,5 @@ func (i *HomeInteractor) NewHomeUsecase() usecase.HomeUsecase {
 }
 
 func (i *HomeInteractor) NewHomeRepository() usecaseRepo.HomeRepository {
-	return databaseRepo.NewHomeRepository(i.DB)
+	return infrastructureRepo.NewHomeRepository(i.DB)
 }

@@ -2,7 +2,9 @@ package injector
 
 import (
 	domainRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
+	domainServ "api/domain/service"
+	infrastructureRepo "api/infrastructure/repository"
+	infrastructureServ "api/infrastructure/service"
 	"api/interface/adapter/gateway"
 	"api/interface/adapter/handler"
 	"api/usecase"
@@ -19,9 +21,15 @@ type MachineInjector interface {
 }
 
 func (i *MachineInteractor) NewMachineHandler() handler.MachineHandler {
-	return handler.NewMachineHandler(i.NewMachineUsecase())
+	return handler.NewMachineHandler(
+		i.NewMachineUsecase(),
+		i.NewUtilityService(),
+	)
 }
 
+func (i *MachineInteractor) NewUtilityService() domainServ.UtilityService {
+	return infrastructureServ.NewUtilityService()
+}
 func (i *MachineInteractor) NewMachineUsecase() usecase.MachineUsecase {
 	return usecase.NewMachineUsecase(
 		i.NewTransactionRepository(),
@@ -35,9 +43,9 @@ func (i *MachineInteractor) NewTransactionRepository() domainRepo.TransactionRep
 }
 
 func (i *MachineInteractor) NewMachineRepository() domainRepo.MachineRepository {
-	return databaseRepo.NewMachineRepository(i.DB)
+	return infrastructureRepo.NewMachineRepository(i.DB)
 }
 
 func (i *MachineInteractor) NewGeneralRepository() domainRepo.GeneralRepository {
-	return databaseRepo.NewGeneralRepository(i.DB)
+	return infrastructureRepo.NewGeneralRepository(i.DB)
 }

@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	domainMachine "api/domain/model/machine"
+	mock_service "api/domain/service/mock"
 	"api/interface/adapter/handler"
 	mock_usecase "api/usecase/mock"
 	"encoding/json"
@@ -19,7 +20,8 @@ import (
 
 func Test_NewMachineHandler(t *testing.T) {
 	usecase := &mock_usecase.MockMachineUsecase{}
-	machineHandler := handler.NewMachineHandler(usecase)
+	utility := &mock_service.MockUtilityService{}
+	machineHandler := handler.NewMachineHandler(usecase, utility)
 	if machineHandler == nil {
 		t.Fatalf("FAILED TO TEST: MachineHandler.NewMachineHandler RETURNS nil.")
 	}
@@ -28,26 +30,33 @@ func Test_NewMachineHandler(t *testing.T) {
 func Test_GetMachineByID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	type mocks struct {
+		machineUsecase *mock_usecase.MockMachineUsecase
+		utilityService *mock_service.MockUtilityService
+	}
 	tests := []struct {
-		name    string
-		usecase *mock_usecase.MockMachineUsecase
-		arg     domainMachine.MachineID
-		want    *domainMachine.Machine
-		status  int
-		isErr   bool
-		err     error
+		name   string
+		mock   mocks
+		arg    domainMachine.MachineID
+		want   *domainMachine.Machine
+		status int
+		isErr  bool
+		err    error
 	}{
 		{
 			name: "Successfully",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockFindMachineByID: func(id domainMachine.MachineID) (*domainMachine.Machine, error) {
-					machine := &domainMachine.Machine{
-						ID:   domainMachine.MachineID("0001"),
-						Name: "test machine 1",
-					}
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockFindMachineByID: func(id domainMachine.MachineID) (*domainMachine.Machine, error) {
+						machine := &domainMachine.Machine{
+							ID:   domainMachine.MachineID("0001"),
+							Name: "test machine 1",
+						}
 
-					return machine, nil
+						return machine, nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			arg: domainMachine.MachineID("0001"),
 			want: &domainMachine.Machine{
@@ -60,10 +69,13 @@ func Test_GetMachineByID(t *testing.T) {
 		},
 		{
 			name: "Error",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockFindMachineByID: func(id domainMachine.MachineID) (*domainMachine.Machine, error) {
-					return nil, fmt.Errorf("FAILED TO FIND THE MACHINE DATA.")
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockFindMachineByID: func(id domainMachine.MachineID) (*domainMachine.Machine, error) {
+						return nil, fmt.Errorf("FAILED TO FIND THE MACHINE DATA.")
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			arg:    domainMachine.MachineID("XXXX"),
 			want:   nil,
@@ -76,8 +88,9 @@ func Test_GetMachineByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			machineUsecase := &mock_usecase.MockMachineUsecase{}
-			machineUsecase.MockFindMachineByID = tt.usecase.FindMachineByID
-			machineHandler := handler.NewMachineHandler(machineUsecase)
+			machineUsecase.MockFindMachineByID = tt.mock.machineUsecase.FindMachineByID
+			utilityService := tt.mock.utilityService
+			machineHandler := handler.NewMachineHandler(machineUsecase, utilityService)
 
 			g := gin.New()
 			g.GET("/api/machine/:id", machineHandler.GetMachineByID)
@@ -111,28 +124,35 @@ func Test_GetMachineByID(t *testing.T) {
 func Test_GetAllMachines(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	type mocks struct {
+		machineUsecase *mock_usecase.MockMachineUsecase
+		utilityService *mock_service.MockUtilityService
+	}
 	tests := []struct {
-		name    string
-		usecase *mock_usecase.MockMachineUsecase
-		want    []*domainMachine.Machine
-		status  int
-		isErr   bool
-		err     error
+		name   string
+		mock   mocks
+		want   []*domainMachine.Machine
+		status int
+		isErr  bool
+		err    error
 	}{
 		{
 			name: "Successfully",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockFindAllMachines: func() ([]*domainMachine.Machine, error) {
-					machines := make([]*domainMachine.Machine, 3)
-					for i := range machines {
-						machines[i] = &domainMachine.Machine{
-							ID:   domainMachine.MachineID(fmt.Sprintf("%04d", i+1)),
-							Name: "test machine " + strconv.Itoa(i+1),
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockFindAllMachines: func() ([]*domainMachine.Machine, error) {
+						machines := make([]*domainMachine.Machine, 3)
+						for i := range machines {
+							machines[i] = &domainMachine.Machine{
+								ID:   domainMachine.MachineID(fmt.Sprintf("%04d", i+1)),
+								Name: "test machine " + strconv.Itoa(i+1),
+							}
 						}
-					}
 
-					return machines, nil
+						return machines, nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			want: []*domainMachine.Machine{
 				{
@@ -154,10 +174,13 @@ func Test_GetAllMachines(t *testing.T) {
 		},
 		{
 			name: "Error due to non-existent ID search.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockFindAllMachines: func() ([]*domainMachine.Machine, error) {
-					return nil, fmt.Errorf("FAILED TO FIND ALL MACHINES DATA.")
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockFindAllMachines: func() ([]*domainMachine.Machine, error) {
+						return nil, fmt.Errorf("FAILED TO FIND ALL MACHINES DATA.")
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			want:   nil,
 			status: http.StatusBadRequest,
@@ -169,14 +192,15 @@ func Test_GetAllMachines(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			machineUsecase := &mock_usecase.MockMachineUsecase{}
-			machineUsecase.MockFindAllMachines = tt.usecase.FindAllMachines
-			machineHandler := handler.NewMachineHandler(machineUsecase)
+			machineUsecase.MockFindAllMachines = tt.mock.machineUsecase.FindAllMachines
+			utilityService := tt.mock.utilityService
+			machineHandler := handler.NewMachineHandler(machineUsecase, utilityService)
 
 			g := gin.New()
 			g.GET("/api/machine/all", machineHandler.GetAllMachines)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", fmt.Sprintf("/api/machine/all"), nil)
+			req, err := http.NewRequest("GET", "/api/machine/all", nil)
 			if err != nil {
 				t.Fatalf("FALED TO CREATE HTTP REQUEST: %s", err)
 			}
@@ -209,6 +233,10 @@ func Test_GetAllMachines(t *testing.T) {
 
 func Test_CreateMachine(t *testing.T) {
 	const EXISTENT_ID string = "ALREADY EXISTS ID"
+	type mocks struct {
+		machineUsecase *mock_usecase.MockMachineUsecase
+		utilityService *mock_service.MockUtilityService
+	}
 	type arguments struct {
 		machine *domainMachine.Machine
 	}
@@ -217,18 +245,21 @@ func Test_CreateMachine(t *testing.T) {
 		err    error
 	}
 	tests := []struct {
-		name    string
-		usecase *mock_usecase.MockMachineUsecase
-		args    arguments
-		want    want
-		isErr   bool
+		name  string
+		mock  mocks
+		args  arguments
+		want  want
+		isErr bool
 	}{
 		{
 			name: "Successfully",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockCreateMachine: func(machine *domainMachine.Machine) error {
-					return nil
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockCreateMachine: func(machine *domainMachine.Machine) error {
+						return nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -243,10 +274,13 @@ func Test_CreateMachine(t *testing.T) {
 		},
 		{
 			name: "Error due to context does not exits.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockCreateMachine: func(machine *domainMachine.Machine) error {
-					return fmt.Errorf("FAILED TO GET THE CONTEXT OBJECT.")
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockCreateMachine: func(machine *domainMachine.Machine) error {
+						return fmt.Errorf("FAILED TO GET THE CONTEXT OBJECT.")
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -261,16 +295,19 @@ func Test_CreateMachine(t *testing.T) {
 		},
 		{
 			name: "Error due to machine's ID already exists.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockCreateMachine: func(machine *domainMachine.Machine) error {
-					existMachine := &domainMachine.Machine{
-						ID: domainMachine.MachineID(EXISTENT_ID),
-					}
-					if machine.ID == existMachine.ID {
-						return fmt.Errorf("THE MACHINE'S ID ALREADY EXISTS.")
-					}
-					return nil
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockCreateMachine: func(machine *domainMachine.Machine) error {
+						existMachine := &domainMachine.Machine{
+							ID: domainMachine.MachineID(EXISTENT_ID),
+						}
+						if machine.ID == existMachine.ID {
+							return fmt.Errorf("THE MACHINE'S ID ALREADY EXISTS.")
+						}
+						return nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -288,8 +325,9 @@ func Test_CreateMachine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			machineUsecase := &mock_usecase.MockMachineUsecase{}
-			machineUsecase.MockCreateMachine = tt.usecase.CreateMachine
-			machineHandler := handler.NewMachineHandler(machineUsecase)
+			machineUsecase.MockCreateMachine = tt.mock.machineUsecase.CreateMachine
+			utilityService := tt.mock.utilityService
+			machineHandler := handler.NewMachineHandler(machineUsecase, utilityService)
 
 			g := gin.New()
 			store := cookie.NewStore([]byte("secret"))
@@ -304,7 +342,7 @@ func Test_CreateMachine(t *testing.T) {
 			g.ServeHTTP(w, req)
 
 			if tt.want.status == http.StatusOK {
-				errCreate := tt.usecase.MockCreateMachine(tt.args.machine)
+				errCreate := tt.mock.machineUsecase.MockCreateMachine(tt.args.machine)
 				if errCreate != nil {
 					t.Error(errCreate)
 				}
@@ -322,6 +360,10 @@ func Test_UpdateMachine(t *testing.T) {
 		EXISTENT_ID     string = "EXISTENT ID"
 		NON_EXISTENT_ID string = "NON EXISTENT ID"
 	)
+	type mocks struct {
+		machineUsecase *mock_usecase.MockMachineUsecase
+		utilityService *mock_service.MockUtilityService
+	}
 	type arguments struct {
 		machine *domainMachine.Machine
 	}
@@ -330,18 +372,21 @@ func Test_UpdateMachine(t *testing.T) {
 		err    error
 	}
 	tests := []struct {
-		name    string
-		usecase *mock_usecase.MockMachineUsecase
-		args    arguments
-		want    want
-		isErr   bool
+		name  string
+		mock  mocks
+		args  arguments
+		want  want
+		isErr bool
 	}{
 		{
 			name: "Successfully",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockUpdateMachine: func(machine *domainMachine.Machine) error {
-					return nil
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockUpdateMachine: func(machine *domainMachine.Machine) error {
+						return nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -356,10 +401,13 @@ func Test_UpdateMachine(t *testing.T) {
 		},
 		{
 			name: "Error due to context does not exits.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockUpdateMachine: func(machine *domainMachine.Machine) error {
-					return fmt.Errorf("FAILED TO GET THE CONTEXT OBJECT.")
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockUpdateMachine: func(machine *domainMachine.Machine) error {
+						return fmt.Errorf("FAILED TO GET THE CONTEXT OBJECT.")
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -374,16 +422,19 @@ func Test_UpdateMachine(t *testing.T) {
 		},
 		{
 			name: "Error due to machine's ID does not exists.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockUpdateMachine: func(machine *domainMachine.Machine) error {
-					existMachine := &domainMachine.Machine{
-						ID: domainMachine.MachineID(EXISTENT_ID),
-					}
-					if machine.ID != existMachine.ID {
-						return fmt.Errorf("THE MACHINE'S ID DOES NOT EXISTS.")
-					}
-					return nil
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockUpdateMachine: func(machine *domainMachine.Machine) error {
+						existMachine := &domainMachine.Machine{
+							ID: domainMachine.MachineID(EXISTENT_ID),
+						}
+						if machine.ID != existMachine.ID {
+							return fmt.Errorf("THE MACHINE'S ID DOES NOT EXISTS.")
+						}
+						return nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -401,8 +452,9 @@ func Test_UpdateMachine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			machineUsecase := &mock_usecase.MockMachineUsecase{}
-			machineUsecase.MockUpdateMachine = tt.usecase.UpdateMachine
-			machineHandler := handler.NewMachineHandler(machineUsecase)
+			machineUsecase.MockUpdateMachine = tt.mock.machineUsecase.UpdateMachine
+			utilityService := tt.mock.utilityService
+			machineHandler := handler.NewMachineHandler(machineUsecase, utilityService)
 
 			g := gin.New()
 			store := cookie.NewStore([]byte("secret"))
@@ -417,7 +469,7 @@ func Test_UpdateMachine(t *testing.T) {
 			g.ServeHTTP(w, req)
 
 			if tt.want.status == http.StatusOK {
-				errUsecase := tt.usecase.MockUpdateMachine(tt.args.machine)
+				errUsecase := tt.mock.machineUsecase.MockUpdateMachine(tt.args.machine)
 				if errUsecase != nil {
 					t.Error(errUsecase)
 				}
@@ -435,6 +487,10 @@ func Test_DeleteMachine(t *testing.T) {
 		EXISTENT_ID     string = "EXISTENT ID"
 		NON_EXISTENT_ID string = "NON EXISTENT ID"
 	)
+	type mocks struct {
+		machineUsecase *mock_usecase.MockMachineUsecase
+		utilityService *mock_service.MockUtilityService
+	}
 	type arguments struct {
 		machine *domainMachine.Machine
 	}
@@ -443,18 +499,21 @@ func Test_DeleteMachine(t *testing.T) {
 		err    error
 	}
 	tests := []struct {
-		name    string
-		usecase *mock_usecase.MockMachineUsecase
-		args    arguments
-		want    want
-		isErr   bool
+		name  string
+		mock  mocks
+		args  arguments
+		want  want
+		isErr bool
 	}{
 		{
 			name: "Successfully",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockStopUsingMachine: func(machine *domainMachine.Machine) error {
-					return nil
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockStopUsingMachine: func(machine *domainMachine.Machine) error {
+						return nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -469,10 +528,13 @@ func Test_DeleteMachine(t *testing.T) {
 		},
 		{
 			name: "Error due to context does not exits.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockUpdateMachine: func(machine *domainMachine.Machine) error {
-					return fmt.Errorf("FAILED TO GET THE CONTEXT OBJECT.")
+			mock: mocks{
+				&mock_usecase.MockMachineUsecase{
+					MockUpdateMachine: func(machine *domainMachine.Machine) error {
+						return fmt.Errorf("FAILED TO GET THE CONTEXT OBJECT.")
+					},
 				},
+				&mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -487,16 +549,19 @@ func Test_DeleteMachine(t *testing.T) {
 		},
 		{
 			name: "Error due to machine's ID does not exists.",
-			usecase: &mock_usecase.MockMachineUsecase{
-				MockStopUsingMachine: func(machine *domainMachine.Machine) error {
-					existMachine := &domainMachine.Machine{
-						ID: domainMachine.MachineID(EXISTENT_ID),
-					}
-					if machine.ID != existMachine.ID {
-						return fmt.Errorf("THE MACHINE'S ID DOES NOT EXISTS.")
-					}
-					return nil
+			mock: mocks{
+				machineUsecase: &mock_usecase.MockMachineUsecase{
+					MockStopUsingMachine: func(machine *domainMachine.Machine) error {
+						existMachine := &domainMachine.Machine{
+							ID: domainMachine.MachineID(EXISTENT_ID),
+						}
+						if machine.ID != existMachine.ID {
+							return fmt.Errorf("THE MACHINE'S ID DOES NOT EXISTS.")
+						}
+						return nil
+					},
 				},
+				utilityService: &mock_service.MockUtilityService{},
 			},
 			args: arguments{
 				machine: &domainMachine.Machine{
@@ -514,8 +579,9 @@ func Test_DeleteMachine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			machineUsecase := &mock_usecase.MockMachineUsecase{}
-			machineUsecase.MockStopUsingMachine = tt.usecase.StopUsingMachine
-			machineHandler := handler.NewMachineHandler(machineUsecase)
+			machineUsecase.MockStopUsingMachine = tt.mock.machineUsecase.StopUsingMachine
+			utilityService := tt.mock.utilityService
+			machineHandler := handler.NewMachineHandler(machineUsecase, utilityService)
 
 			g := gin.New()
 			store := cookie.NewStore([]byte("secret"))
@@ -530,7 +596,7 @@ func Test_DeleteMachine(t *testing.T) {
 			g.ServeHTTP(w, req)
 
 			if tt.want.status == http.StatusOK {
-				errUsecase := tt.usecase.MockStopUsingMachine(tt.args.machine)
+				errUsecase := tt.mock.machineUsecase.MockStopUsingMachine(tt.args.machine)
 				if errUsecase != nil {
 					t.Error(errUsecase)
 				}

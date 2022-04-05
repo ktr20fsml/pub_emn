@@ -1,38 +1,65 @@
 package service
 
 import (
-	domainItem "api/domain/model/item"
+	domainInventory "api/domain/model/inventory"
+	domainProduction "api/domain/model/production"
 	"api/domain/repository"
 	"api/domain/service"
-	"api/infrastructure/database/sql"
-	"fmt"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type productionService struct {
-	db                  *sqlx.DB
 	itemRepository      repository.ItemRepository
 	inventoryRepository repository.InventoryRepository
 }
 
-func NewProductionService(db *sqlx.DB) service.ProductionService {
+func NewProductionService(itemRepo repository.ItemRepository, inventoryRepo repository.InventoryRepository) service.ProductionService {
 	return &productionService{
-		db: db,
+		itemRepository:      itemRepo,
+		inventoryRepository: inventoryRepo,
 	}
 }
 
-func (ps *productionService) CheckExistsInInventory(itemID domainItem.ItemID, processID domainItem.ProcessID, lot string, branch string) (bool, error) {
-	var count int
+func (ps *productionService) Consump(production *domainProduction.Production) ([]*domainInventory.Inventory, error) {
+	// Define the variables "inventories" to return and "tmpInventories" to calculate.
+	// The reason length of these slice add 1 is to store the result.
+	inventories := make([]*domainInventory.Inventory, len(production.ConsumptionList)+1)
 
-	err := ps.db.Get(&count, sql.CountItemInInventory, itemID, processID, lot, branch)
-	if err != nil {
-		return false, fmt.Errorf("FAILED TO FIND ITEM IN INVENTORY: %s", err.Error())
+	// 1. Subtract consumptions from inventory.
+	for i, c := range production.ConsumptionList {
+		tmpInventory, errFindInventory := ps.inventoryRepository.FindInventory(c.ItemID, c.ProcessID, c.Lot, c.Branch)
+		if errFindInventory != nil {
+			return nil, errFindInventory
+		}
+
+		tmpInventory.NonDefectiveQty -= c.NonDefectiveQty
+		tmpInventory.DefectiveQty -= c.DefectiveQty
+		tmpInventory.SuspendedQty -= c.SuspendedQty
+		tmpInventory.IsUsed = true
+		tmpInventory.IsUsedUp = c.IsUsedUp
+
+		inventories[i] = tmpInventory
 	}
 
-	if count == 0 {
-		return false, fmt.Errorf("NO ITEM")
+	tmpItem, errFindItem := ps.itemRepository.FindItemByID(production.ItemID)
+	if errFindItem != nil {
+		return nil, errFindItem
+	}
+	expirationDate := production.ProducedAt.AddDate(0, 0, int(tmpItem.ValidityDays))
+
+	// 2. Add production in inventory.
+	inventories[len(inventories)-1] = &domainInventory.Inventory{
+		ItemID:          production.ItemID,
+		ProcessID:       production.ProcessID,
+		WarehouseID:     tmpItem.WarehouseID,
+		Lot:             production.Lot,
+		Branch:          production.Branch,
+		NonDefectiveQty: production.NonDefectiveQty,
+		DefectiveQty:    production.DefectiveQty,
+		SuspendedQty:    production.SuspendedQty,
+		ExpirationDate:  expirationDate,
+		IsUsed:          false,
+		IsUsedUp:        false,
 	}
 
-	return true, nil
+	return inventories, nil
 }

@@ -2,7 +2,7 @@ package injector
 
 import (
 	usecaseRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
+	infrastructureRepo "api/infrastructure/repository"
 	"api/interface/adapter/handler"
 	"api/usecase"
 
@@ -26,5 +26,5 @@ func (i *UserInteractor) NewUserUsecase() usecase.UserUsecase {
 }
 
 func (i *UserInteractor) NewUserRepository() usecaseRepo.UserRepository {
-	return databaseRepo.NewUserRepository(i.DB)
+	return infrastructureRepo.NewUserRepository(i.DB)
 }

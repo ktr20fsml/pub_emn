@@ -2,13 +2,11 @@ package handler
 
 import (
 	domainUser "api/domain/model/user"
+	"api/domain/service"
 	"api/status"
 	"api/usecase"
 	"fmt"
 	"net/http"
-
-	"api/infrastructure/library/crypt"
-	"api/infrastructure/library/session"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -16,6 +14,7 @@ import (
 
 type homeHandler struct {
 	homeUsecase usecase.HomeUsecase
+	utility     service.UtilityService
 }
 
 type HomeHandler interface {
@@ -25,23 +24,44 @@ type HomeHandler interface {
 	Signout(ctx *gin.Context)
 }
 
-func NewHomeHandler(hs usecase.HomeUsecase) HomeHandler {
+func NewHomeHandler(hs usecase.HomeUsecase, util service.UtilityService) HomeHandler {
 	return &homeHandler{
 		homeUsecase: hs,
+		utility:     util,
 	}
 }
 
 func (hh *homeHandler) Home(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	id, ok := sess.Get("UserID").(string)
+	if !ok {
+		id = "Unknown ID"
+	}
+	name, ok := sess.Get("UserName").(string)
+	if !ok {
+		name = "Unknown Name"
+	}
+	admin, ok := sess.Get("Administrative").(bool)
+	if !ok {
+		admin = false
+	}
+
 	user := &domainUser.User{
-		ID:             domainUser.UserID(session.GetUserID(ctx)),
-		Name:           session.GetUserName(ctx),
-		Administrative: session.GetAdministrative(ctx),
+		ID:             domainUser.UserID(id),
+		Name:           name,
+		Administrative: admin,
 	}
 
 	ctx.JSON(http.StatusOK, user)
 }
 
 func (hh *homeHandler) Signup(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	id, ok := sess.Get("UserID").(string)
+	if !ok {
+		id = "Unknown ID"
+	}
+
 	user := &domainUser.User{}
 	errBind := ctx.BindJSON(user)
 	if errBind != nil {
@@ -54,9 +74,9 @@ func (hh *homeHandler) Signup(ctx *gin.Context) {
 		return
 	}
 
-	user.CreatedBy = domainUser.UserID(session.GetUserID(ctx))
+	user.CreatedBy = domainUser.UserID(id)
 
-	hashedPassword, errEncrypt := crypt.Encrypt(user.Password)
+	hashedPassword, errEncrypt := hh.utility.Encrypt(user.Password)
 	if errEncrypt != nil {
 		fmt.Println(errEncrypt)
 	}
@@ -81,7 +101,7 @@ func (hh *homeHandler) Signin(ctx *gin.Context) {
 	}
 
 	plainPassword := user.Password
-	_, errEncrypt := crypt.Encrypt(plainPassword)
+	_, errEncrypt := hh.utility.Encrypt(plainPassword)
 	if errEncrypt != nil {
 		fmt.Println(errEncrypt)
 	}
@@ -92,12 +112,12 @@ func (hh *homeHandler) Signin(ctx *gin.Context) {
 		return
 	}
 
-	auth, errVerify := crypt.Verify(resUser.Password, plainPassword)
+	auth, errVerify := hh.utility.Verify(resUser.Password, plainPassword)
 	if errVerify != nil {
 		ctx.JSON(http.StatusBadRequest, status.Status{Message: errVerify.Error()})
 		return
 	}
-	if auth != true {
+	if !auth {
 		ctx.JSON(http.StatusBadRequest, status.Status{Message: "AUTHENTICATION FAILED ERROR"})
 		return
 	}

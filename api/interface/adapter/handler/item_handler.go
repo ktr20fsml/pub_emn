@@ -4,8 +4,8 @@ import (
 	"api/domain/model/general"
 	"api/domain/model/item"
 	"api/domain/model/user"
-	"api/infrastructure/library/session"
-	"api/infrastructure/library/utility"
+	"api/domain/service"
+	session_helper "api/interface/adapter/handler/helper"
 	"api/status"
 	"api/usecase"
 	"net/http"
@@ -16,6 +16,7 @@ import (
 
 type itemHandler struct {
 	itemUsecase usecase.ItemUsecase
+	utility     service.UtilityService
 }
 
 type ItemHandler interface {
@@ -56,9 +57,10 @@ type ItemHandler interface {
 	StopUsingItemProcess(*gin.Context)
 }
 
-func NewItemHandler(iu usecase.ItemUsecase) ItemHandler {
+func NewItemHandler(iu usecase.ItemUsecase, util service.UtilityService) ItemHandler {
 	return &itemHandler{
 		itemUsecase: iu,
+		utility:     util,
 	}
 }
 
@@ -141,21 +143,21 @@ func (ih *itemHandler) PostItem(ctx *gin.Context) {
 
 	table_info := &general.TableInformation{}
 	table_info.CreatedAt = time.Now()
-	table_info.CreatedBy = user.UserID(session.GetUserID(ctx))
+	table_info.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	tableInfoID, _ := utility.CreateUUID()
+	tableInfoID, _ := ih.utility.NewRandomUUID()
 	itemTableInfoID := general.TableInformationID(tableInfoID)
 	item.TableInformationID, table_info.ID = itemTableInfoID, itemTableInfoID
 	item.TableInformation = *table_info
 
 	for _, machine := range item.MachineList {
-		tableInfoID, _ := utility.CreateUUID()
+		tableInfoID, _ := ih.utility.NewRandomUUID()
 		machineTableInfoID := general.TableInformationID(tableInfoID)
 		machine.TableInformationID, table_info.ID = machineTableInfoID, machineTableInfoID
 		machine.TableInformation = *table_info
 	}
 	for _, enduser := range item.EndUserList {
-		tableInfoID, _ := utility.CreateUUID()
+		tableInfoID, _ := ih.utility.NewRandomUUID()
 		enduserTableInfoID := general.TableInformationID(tableInfoID)
 		enduser.TableInformationID, table_info.ID = enduserTableInfoID, enduserTableInfoID
 		enduser.TableInformation = *table_info
@@ -183,7 +185,7 @@ func (ih *itemHandler) PutItem(ctx *gin.Context) {
 
 	item.TableInformation.ID = item.TableInformationID
 	item.TableInformation.UpdatedAt = time.Now()
-	item.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	item.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := ih.itemUsecase.UpdateItem(item)
 	if errUpdate != nil {
@@ -206,7 +208,7 @@ func (ih *itemHandler) StopUsingItem(ctx *gin.Context) {
 
 	item.TableInformation.ID = item.TableInformationID
 	item.TableInformation.UpdatedAt = time.Now()
-	item.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	item.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errDelete := ih.itemUsecase.StopUsingItem(item)
 	if errDelete != nil {
@@ -257,9 +259,9 @@ func (ih *itemHandler) CreateItemCategory(ctx *gin.Context) {
 
 	tableInfo := &general.TableInformation{}
 	tableInfo.CreatedAt = time.Now()
-	tableInfo.CreatedBy = user.UserID(session.GetUserID(ctx))
+	tableInfo.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	itemCategoryTableInfoID, _ := utility.CreateUUID()
+	itemCategoryTableInfoID, _ := ih.utility.NewRandomUUID()
 	tableInfoID := general.TableInformationID(itemCategoryTableInfoID)
 	itemCategory.TableInformationID, tableInfo.ID = tableInfoID, tableInfoID
 	itemCategory.TableInformation = *tableInfo
@@ -285,7 +287,7 @@ func (ih *itemHandler) UpdateItemCategory(ctx *gin.Context) {
 
 	itemCategory.TableInformation.ID = itemCategory.TableInformationID
 	itemCategory.TableInformation.UpdatedAt = time.Now()
-	itemCategory.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemCategory.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := ih.itemUsecase.UpdateItemCategory(itemCategory)
 	if errUpdate != nil {
@@ -308,7 +310,7 @@ func (ih *itemHandler) StopUsingItemCategory(ctx *gin.Context) {
 
 	itemCategory.TableInformation.ID = itemCategory.TableInformationID
 	itemCategory.TableInformation.UpdatedAt = time.Now()
-	itemCategory.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemCategory.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errStopUsing := ih.itemUsecase.StopUsingItemCategory(itemCategory)
 	if errStopUsing != nil {
@@ -359,9 +361,9 @@ func (ih *itemHandler) CreateItemStatus(ctx *gin.Context) {
 
 	tableInfo := &general.TableInformation{}
 	tableInfo.CreatedAt = time.Now()
-	tableInfo.CreatedBy = user.UserID(session.GetUserID(ctx))
+	tableInfo.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	itemCategoryTableInfoID, _ := utility.CreateUUID()
+	itemCategoryTableInfoID, _ := ih.utility.NewRandomUUID()
 	tableInfoID := general.TableInformationID(itemCategoryTableInfoID)
 	itemStatus.TableInformationID, tableInfo.ID = tableInfoID, tableInfoID
 	itemStatus.TableInformation = *tableInfo
@@ -387,7 +389,7 @@ func (ih *itemHandler) UpdateItemStatus(ctx *gin.Context) {
 
 	itemStatus.TableInformation.ID = itemStatus.TableInformationID
 	itemStatus.TableInformation.UpdatedAt = time.Now()
-	itemStatus.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemStatus.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := ih.itemUsecase.UpdateItemStatus(itemStatus)
 	if errUpdate != nil {
@@ -410,7 +412,7 @@ func (ih *itemHandler) StopUsingItemStatus(ctx *gin.Context) {
 
 	itemStatus.TableInformation.ID = itemStatus.TableInformationID
 	itemStatus.TableInformation.UpdatedAt = time.Now()
-	itemStatus.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemStatus.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errStopUsing := ih.itemUsecase.StopUsingItemStatus(itemStatus)
 	if errStopUsing != nil {
@@ -461,9 +463,9 @@ func (ih *itemHandler) CreateItemUnit(ctx *gin.Context) {
 
 	tableInfo := &general.TableInformation{}
 	tableInfo.CreatedAt = time.Now()
-	tableInfo.CreatedBy = user.UserID(session.GetUserID(ctx))
+	tableInfo.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	itemCategoryTableInfoID, _ := utility.CreateUUID()
+	itemCategoryTableInfoID, _ := ih.utility.NewRandomUUID()
 	tableInfoID := general.TableInformationID(itemCategoryTableInfoID)
 	itemUnit.TableInformationID, tableInfo.ID = tableInfoID, tableInfoID
 	itemUnit.TableInformation = *tableInfo
@@ -489,7 +491,7 @@ func (ih *itemHandler) UpdateItemUnit(ctx *gin.Context) {
 
 	itemUnit.TableInformation.ID = itemUnit.TableInformationID
 	itemUnit.TableInformation.UpdatedAt = time.Now()
-	itemUnit.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemUnit.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := ih.itemUsecase.UpdateItemUnit(itemUnit)
 	if errUpdate != nil {
@@ -512,7 +514,7 @@ func (ih *itemHandler) StopUsingItemUnit(ctx *gin.Context) {
 
 	itemUnit.TableInformation.ID = itemUnit.TableInformationID
 	itemUnit.TableInformation.UpdatedAt = time.Now()
-	itemUnit.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemUnit.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errStopUsing := ih.itemUsecase.StopUsingItemUnit(itemUnit)
 	if errStopUsing != nil {
@@ -563,9 +565,9 @@ func (ih *itemHandler) CreateItemProcess(ctx *gin.Context) {
 
 	tableInfo := &general.TableInformation{}
 	tableInfo.CreatedAt = time.Now()
-	tableInfo.CreatedBy = user.UserID(session.GetUserID(ctx))
+	tableInfo.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	itemCategoryTableInfoID, _ := utility.CreateUUID()
+	itemCategoryTableInfoID, _ := ih.utility.NewRandomUUID()
 	tableInfoID := general.TableInformationID(itemCategoryTableInfoID)
 	itemProcess.TableInformationID, tableInfo.ID = tableInfoID, tableInfoID
 	itemProcess.TableInformation = *tableInfo
@@ -591,7 +593,7 @@ func (ih *itemHandler) UpdateItemProcess(ctx *gin.Context) {
 
 	itemProcess.TableInformation.ID = itemProcess.TableInformationID
 	itemProcess.TableInformation.UpdatedAt = time.Now()
-	itemProcess.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemProcess.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := ih.itemUsecase.UpdateItemProcess(itemProcess)
 	if errUpdate != nil {
@@ -614,7 +616,7 @@ func (ih *itemHandler) StopUsingItemProcess(ctx *gin.Context) {
 
 	itemProcess.TableInformation.ID = itemProcess.TableInformationID
 	itemProcess.TableInformation.UpdatedAt = time.Now()
-	itemProcess.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	itemProcess.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errStopUsing := ih.itemUsecase.StopUsingItemProcess(itemProcess)
 	if errStopUsing != nil {

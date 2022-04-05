@@ -2,7 +2,7 @@ package injector
 
 import (
 	usecaseRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
+	infrastructureRepo "api/infrastructure/repository"
 	"api/interface/adapter/handler"
 	"api/usecase"
 
@@ -31,17 +31,17 @@ func (i *InventoryInteractor) NewInventoryUsecase() usecase.InventoryUsecase {
 }
 
 func (i *InventoryInteractor) NewInventoryRepository() usecaseRepo.InventoryRepository {
-	return databaseRepo.NewInventoryRepository(i.DB)
+	return infrastructureRepo.NewInventoryRepository(i.DB)
 }
 
 func (i *InventoryInteractor) NewItemRepository() usecaseRepo.ItemRepository {
-	return databaseRepo.NewItemRepository(i.DB)
+	return infrastructureRepo.NewItemRepository(i.DB)
 }
 
 func (i *InventoryInteractor) NewMachineRepository() usecaseRepo.MachineRepository {
-	return databaseRepo.NewMachineRepository(i.DB)
+	return infrastructureRepo.NewMachineRepository(i.DB)
 }
 
 func (i *InventoryInteractor) NewLocationRepository() usecaseRepo.LocationRepository {
-	return databaseRepo.NewLocationRepository(i.DB)
+	return infrastructureRepo.NewLocationRepository(i.DB)
 }

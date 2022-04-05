@@ -1,9 +1,10 @@
 package service
 
 import (
-	domainItem "api/domain/model/item"
+	domainInventory "api/domain/model/inventory"
+	domainProduction "api/domain/model/production"
 )
 
 type ProductionService interface {
-	CheckExistsInInventory(itemID domainItem.ItemID, processID domainItem.ProcessID, lot string, branch string) (bool, error)
+	Consump(*domainProduction.Production) ([]*domainInventory.Inventory, error)
 }

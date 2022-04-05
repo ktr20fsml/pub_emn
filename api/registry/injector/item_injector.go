@@ -2,7 +2,9 @@ package injector
 
 import (
 	domainRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
+	domainServ "api/domain/service"
+	infrastructureRepo "api/infrastructure/repository"
+	infrastructureServ "api/infrastructure/service"
 	"api/interface/adapter/gateway"
 	"api/interface/adapter/handler"
 	"api/usecase"
@@ -19,7 +21,14 @@ type ItemInjector interface {
 }
 
 func (i *ItemInteractor) NewItemHandler() handler.ItemHandler {
-	return handler.NewItemHandler(i.NewItemService())
+	return handler.NewItemHandler(
+		i.NewItemService(),
+		i.NewUtilityService(),
+	)
+}
+
+func (i *ItemInteractor) NewUtilityService() domainServ.UtilityService {
+	return infrastructureServ.NewUtilityService()
 }
 
 func (i *ItemInteractor) NewItemService() usecase.ItemUsecase {
@@ -37,17 +46,17 @@ func (i *ItemInteractor) NewTransactionRepository() domainRepo.TransactionReposi
 }
 
 func (i *ItemInteractor) NewItemRepository() domainRepo.ItemRepository {
-	return databaseRepo.NewItemRepository(i.DB)
+	return infrastructureRepo.NewItemRepository(i.DB)
 }
 
 func (i *ItemInteractor) NewMachineRepository() domainRepo.MachineRepository {
-	return databaseRepo.NewMachineRepository(i.DB)
+	return infrastructureRepo.NewMachineRepository(i.DB)
 }
 
 func (i *ItemInteractor) NewLocationRepository() domainRepo.LocationRepository {
-	return databaseRepo.NewLocationRepository(i.DB)
+	return infrastructureRepo.NewLocationRepository(i.DB)
 }
 
 func (i *ItemInteractor) NewGeneralRepository() domainRepo.GeneralRepository {
-	return databaseRepo.NewGeneralRepository(i.DB)
+	return infrastructureRepo.NewGeneralRepository(i.DB)
 }

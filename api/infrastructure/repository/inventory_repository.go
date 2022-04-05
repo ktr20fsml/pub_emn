@@ -8,6 +8,7 @@ import (
 	dtoInventory "api/infrastructure/dto/inventory"
 	"api/interface/adapter/gateway"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -40,6 +41,20 @@ func (ir *inventoryRepository) FindAllInventories() ([]*domainInventory.Inventor
 	}
 
 	return dtoInventory.ConvertToInventoriesDomains(inventories), nil
+}
+
+func (pr *inventoryRepository) CheckExistsInventory(itemID domainItem.ItemID, processID domainItem.ProcessID, lot string, branch string) (bool, error) {
+	var count int
+
+	err := pr.db.Get(&count, sql.CountItemInInventory, itemID, processID, lot, branch)
+	if err != nil {
+		return false, fmt.Errorf("FAILED TO FIND ITEM IN INVENTORY: %s", err)
+	}
+	if count == 0 {
+		return false, errors.New("NO ITEM")
+	}
+
+	return true, nil
 }
 
 func (pr *inventoryRepository) UpsertInventories(ctx context.Context, inventories []*domainInventory.Inventory) error {

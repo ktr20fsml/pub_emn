@@ -4,8 +4,8 @@ import (
 	"api/domain/model/general"
 	"api/domain/model/production"
 	"api/domain/model/user"
-	"api/infrastructure/library/session"
-	"api/infrastructure/library/utility"
+	"api/domain/service"
+	session_helper "api/interface/adapter/handler/helper"
 	"api/status"
 	"api/usecase"
 	"net/http"
@@ -16,6 +16,7 @@ import (
 
 type productionHandler struct {
 	productionUsecase usecase.ProductionUsecase
+	utility           service.UtilityService
 }
 
 type ProductionHandler interface {
@@ -25,9 +26,10 @@ type ProductionHandler interface {
 	PostProduction(ctx *gin.Context)
 }
 
-func NewProductionHandler(ps usecase.ProductionUsecase) ProductionHandler {
+func NewProductionHandler(ps usecase.ProductionUsecase, util service.UtilityService) ProductionHandler {
 	return &productionHandler{
 		productionUsecase: ps,
+		utility:           util,
 	}
 }
 
@@ -73,19 +75,20 @@ func (ph *productionHandler) PostProduction(ctx *gin.Context) {
 	// Create table information.
 	tableInfo := &general.TableInformation{}
 	tableInfo.CreatedAt = time.Now()
-	tableInfo.CreatedBy = user.UserID(session.GetUserID(ctx))
+	tableInfo.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	tableInfoID, _ := utility.CreateUUID()
+	// tableInfoID, _ := utility.CreateUUID()
+	tableInfoID, _ := ph.utility.NewRandomUUID()
 	productionTableInfoID := general.TableInformationID(tableInfoID)
 	p.TableInformationID, tableInfo.ID = productionTableInfoID, productionTableInfoID
 	p.TableInformation = *tableInfo
 
 	// Create UUID on "production" table.
-	productionID, _ := utility.CreateUUID()
+	productionID, _ := ph.utility.NewRandomUUID()
 	p.ID = production.ProductionID(productionID)
 
 	// Create UUID on "production" and "consumption_list" tables.
-	csmpID, _ := utility.CreateUUID()
+	csmpID, _ := ph.utility.NewRandomUUID()
 	p.ConsumptionListID = production.ConsumptionListID(csmpID)
 	for _, c := range p.ConsumptionList {
 		c.ID = production.ConsumptionListID(csmpID)

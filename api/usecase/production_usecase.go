@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"api/domain/model/inventory"
-	domainInventory "api/domain/model/inventory"
 	"api/domain/model/production"
 	"api/domain/repository"
 	"api/domain/service"
@@ -16,6 +14,7 @@ type productionUsecase struct {
 	productionService     service.ProductionService
 	itemRepository        repository.ItemRepository
 	inventoryRepository   repository.InventoryRepository
+	inventoryService      service.InventoryService
 	generalRepository     repository.GeneralRepository
 }
 
@@ -23,7 +22,6 @@ type ProductionUsecase interface {
 	FindAllProductions() ([]*production.Production, error)
 	FindProductionByID(id string) (*production.Production, error)
 	FindProductionByItemID(itemID string) ([]*production.Production, error)
-	Consump(*production.Production) ([]*inventory.Inventory, error)
 	CreateProduction(context.Context, *production.Production) error
 }
 
@@ -33,6 +31,7 @@ func NewProductionUsecase(
 	productionServ service.ProductionService,
 	itemRepo repository.ItemRepository,
 	inventoryRepo repository.InventoryRepository,
+	inventoryServ service.InventoryService,
 	generalRepo repository.GeneralRepository,
 ) ProductionUsecase {
 	return &productionUsecase{
@@ -41,6 +40,7 @@ func NewProductionUsecase(
 		productionService:     productionServ,
 		itemRepository:        itemRepo,
 		inventoryRepository:   inventoryRepo,
+		inventoryService:      inventoryServ,
 		generalRepository:     generalRepo,
 	}
 }
@@ -72,59 +72,9 @@ func (pu *productionUsecase) FindProductionByItemID(id string) ([]*production.Pr
 	return productions, err
 }
 
-/*
-	This "consump" method should not impliment in repository layer.
-	Since this method has multiple repository layer's method.
-	And not only necessary to write the process flow, but also to calculate the comsumption of materials.
-*/
-func (pu *productionUsecase) Consump(p *production.Production) ([]*inventory.Inventory, error) {
-	// Define the variables "inventories" to return and "tmpInventories" to calculate.
-	// The reason length of these slice add 1 is to store the result.
-	inventories := make([]*inventory.Inventory, len(p.ConsumptionList)+1)
-
-	// 1. Subtract consumptions from inventory.
-	for i, c := range p.ConsumptionList {
-		tmpInventory, errFindInventory := pu.inventoryRepository.FindInventory(c.ItemID, c.ProcessID, c.Lot, c.Branch)
-		if errFindInventory != nil {
-			return nil, errFindInventory
-		}
-
-		tmpInventory.NonDefectiveQty -= c.NonDefectiveQty
-		tmpInventory.DefectiveQty -= c.DefectiveQty
-		tmpInventory.SuspendedQty -= c.SuspendedQty
-		tmpInventory.IsUsed = true
-		tmpInventory.IsUsedUp = c.IsUsedUp
-
-		inventories[i] = tmpInventory
-	}
-
-	tmpItem, errFindItem := pu.itemRepository.FindItemByID(p.ItemID)
-	if errFindItem != nil {
-		return nil, errFindItem
-	}
-	expirationDate := p.ProducedAt.AddDate(0, 0, int(tmpItem.ValidityDays))
-
-	// 2. Add production in inventory.
-	inventories[len(inventories)-1] = &domainInventory.Inventory{
-		ItemID:          p.ItemID,
-		ProcessID:       p.ProcessID,
-		WarehouseID:     tmpItem.WarehouseID,
-		Lot:             p.Lot,
-		Branch:          p.Branch,
-		NonDefectiveQty: p.NonDefectiveQty,
-		DefectiveQty:    p.DefectiveQty,
-		SuspendedQty:    p.SuspendedQty,
-		ExpirationDate:  expirationDate,
-		IsUsed:          false,
-		IsUsedUp:        false,
-	}
-
-	return inventories, nil
-}
-
 func (pu *productionUsecase) CreateProduction(ctx context.Context, p *production.Production) error {
 	for _, c := range p.ConsumptionList {
-		ok, errExist := pu.productionService.CheckExistsInInventory(c.ItemID, c.ProcessID, c.Lot, c.Branch)
+		ok, errExist := pu.inventoryService.CheckExists(c.ItemID, c.ProcessID, c.Lot, c.Branch)
 		if errExist != nil {
 			return errExist
 		}
@@ -132,7 +82,7 @@ func (pu *productionUsecase) CreateProduction(ctx context.Context, p *production
 			return errExist
 		}
 	}
-	preInventory, err := pu.Consump(p)
+	preInventory, err := pu.productionService.Consump(p)
 	if err != nil {
 		return err
 	}

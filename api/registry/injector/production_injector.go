@@ -2,9 +2,9 @@ package injector
 
 import (
 	domainRepo "api/domain/repository"
-	databaseRepo "api/infrastructure/repository"
 	domainServ "api/domain/service"
-	databaseServ "api/infrastructure/service"
+	infrastructureRepo "api/infrastructure/repository"
+	infrastructureServ "api/infrastructure/service"
 	"api/interface/adapter/gateway"
 	"api/interface/adapter/handler"
 	"api/usecase"
@@ -21,7 +21,14 @@ type ProductionInjector interface {
 }
 
 func (i *ProductionInteractor) NewProductionHandler() handler.ProductionHandler {
-	return handler.NewProductionHandler(i.NewProductionUsecase())
+	return handler.NewProductionHandler(
+		i.NewProductionUsecase(),
+		i.NewUtilityService(),
+	)
+}
+
+func (i *ProductionInteractor) NewUtilityService() domainServ.UtilityService {
+	return infrastructureServ.NewUtilityService()
 }
 
 func (i *ProductionInteractor) NewProductionUsecase() usecase.ProductionUsecase {
@@ -31,6 +38,7 @@ func (i *ProductionInteractor) NewProductionUsecase() usecase.ProductionUsecase 
 		i.NewProductionService(),
 		i.NewItemRepository(),
 		i.NewInventoryRepository(),
+		i.NewInventoryService(),
 		i.NewGeneralRepository(),
 	)
 }
@@ -40,21 +48,25 @@ func (i *ProductionInteractor) NewTransactionRepository() domainRepo.Transaction
 }
 
 func (i *ProductionInteractor) NewProductionRepository() domainRepo.ProductionRepository {
-	return databaseRepo.NewProductionRepository(i.DB)
+	return infrastructureRepo.NewProductionRepository(i.DB)
 }
 
 func (i *ProductionInteractor) NewProductionService() domainServ.ProductionService {
-	return databaseServ.NewProductionService(i.DB)
+	return infrastructureServ.NewProductionService(i.NewItemRepository(), i.NewInventoryRepository())
+}
+
+func (i *ProductionInteractor) NewInventoryService() domainServ.InventoryService {
+	return infrastructureServ.NewInventoryService(i.NewInventoryRepository())
 }
 
 func (i *ProductionInteractor) NewItemRepository() domainRepo.ItemRepository {
-	return databaseRepo.NewItemRepository(i.DB)
+	return infrastructureRepo.NewItemRepository(i.DB)
 }
 
 func (i *ProductionInteractor) NewInventoryRepository() domainRepo.InventoryRepository {
-	return databaseRepo.NewInventoryRepository(i.DB)
+	return infrastructureRepo.NewInventoryRepository(i.DB)
 }
 
 func (i *ProductionInteractor) NewGeneralRepository() domainRepo.GeneralRepository {
-	return databaseRepo.NewGeneralRepository(i.DB)
+	return infrastructureRepo.NewGeneralRepository(i.DB)
 }

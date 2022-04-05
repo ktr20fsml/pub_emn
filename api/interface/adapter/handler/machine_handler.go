@@ -4,8 +4,8 @@ import (
 	"api/domain/model/general"
 	"api/domain/model/machine"
 	"api/domain/model/user"
-	"api/infrastructure/library/session"
-	"api/infrastructure/library/utility"
+	"api/domain/service"
+	session_helper "api/interface/adapter/handler/helper"
 	"api/status"
 	"api/usecase"
 	"net/http"
@@ -16,6 +16,7 @@ import (
 
 type machineHandler struct {
 	machineUsecase usecase.MachineUsecase
+	utility        service.UtilityService
 }
 
 type MachineHandler interface {
@@ -26,9 +27,10 @@ type MachineHandler interface {
 	StopUsingMachine(*gin.Context)
 }
 
-func NewMachineHandler(mu usecase.MachineUsecase) MachineHandler {
+func NewMachineHandler(mu usecase.MachineUsecase, util service.UtilityService) MachineHandler {
 	return &machineHandler{
 		machineUsecase: mu,
+		utility:        util,
 	}
 }
 
@@ -74,9 +76,9 @@ func (mh *machineHandler) CreateMachine(ctx *gin.Context) {
 
 	table_info := &general.TableInformation{}
 	table_info.CreatedAt = time.Now()
-	table_info.CreatedBy = user.UserID(session.GetUserID(ctx))
+	table_info.CreatedBy = user.UserID(session_helper.GetUserID(ctx))
 
-	itemTableInfoID, _ := utility.CreateUUID()
+	itemTableInfoID, _ := mh.utility.NewRandomUUID()
 	tableInfoID := general.TableInformationID(itemTableInfoID)
 	machine.TableInformationID, table_info.ID = tableInfoID, tableInfoID
 	machine.TableInformation = *table_info
@@ -104,7 +106,7 @@ func (mh *machineHandler) UpdateMachine(ctx *gin.Context) {
 
 	machine.TableInformation.ID = machine.TableInformationID
 	machine.TableInformation.UpdatedAt = time.Now()
-	machine.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	machine.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := mh.machineUsecase.UpdateMachine(machine)
 	if errUpdate != nil {
@@ -129,7 +131,7 @@ func (mh *machineHandler) StopUsingMachine(ctx *gin.Context) {
 
 	machine.TableInformation.ID = machine.TableInformationID
 	machine.TableInformation.UpdatedAt = time.Now()
-	machine.TableInformation.UpdatedBy = user.UserID(session.GetUserID(ctx))
+	machine.TableInformation.UpdatedBy = user.UserID(session_helper.GetUserID(ctx))
 
 	errUpdate := mh.machineUsecase.StopUsingMachine(machine)
 	if errUpdate != nil {
