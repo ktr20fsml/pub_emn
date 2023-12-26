@@ -1,0 +1,43 @@
+version: '3.7'
+
+services:
+
+  postgres:
+    container_name: "postgres"
+    build: ./database/postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: uoijlkm<?>
+      POSTGRES_DB: emn
+    hostname: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./database/postgres/data:/var/lib/postgresql
+      - ./database/postgres/init:/docker-entrypoint-initdb.d
+    restart: always
+
+  pgweb:
+    container_name: "pgweb"
+    image: sosedoff/pgweb:0.11.8
+    ports: 
+      - "8888:8081" 
+    environment:
+        PGADMIN_DEFAULT_EMAIL: katoryo
+        PGADMIN_DEFAULT_PASSWORD: uoijlkm<?>
+    links: 
+      - postgres:postgres
+    restart: always
+    depends_on:
+      - postgres
+
+  api:
+    container_name: "api"
+    build: ./api
+    ports:
+      - 8080:8080
+    volumes:
+      - ./api:/api
+    command: "air -c .air.toml"
+    depends_on:
+      - postgres
